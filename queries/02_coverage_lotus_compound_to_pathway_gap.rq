@@ -1,0 +1,53 @@
+# Objective 1/3 coverage query: of all compound-taxon pairs
+# (found in taxon, P703) for a given taxon, how many compounds have
+# NO linked pathway (via P527) at all?
+#
+# IMPORTANT caveat (worth recording in the gap analysis, Objective 3):
+# there is no reliable way found so far to filter P703 statements down to
+# "the ones LOTUS specifically contributed". LOTUS, natural product database
+# (Q104225190) is NOT used as a `stated in` (P248) reference on these
+# statements - verified empirically: 0 statements reference it via P248,
+# and 0 via `based on heuristic` (P887) either. Statements imported via
+# LOTUS instead cite the original literature directly (e.g. Q47196990
+# "Complex Portal", individual journal articles), indistinguishable at
+# the RDF level from any other P703 statement. So this query treats ALL
+# P703 statements for the taxon as the baseline, not a LOTUS-only subset.
+# Revisit if a better LOTUS-provenance marker turns up during the domain survey.
+#
+# This is a first, rough gap metric for the "compound -> pathway" link
+# in the chain table. Run at https://query.wikidata.org/
+#
+# Two pathway counts are given because P527 ("has part(s)") alone is
+# noisy: it also picks up plain composition statements (e.g. "ammonium
+# cation" has part "ammonia"), not just real biosynthetic pathways.
+# Adding a P2410 (WikiPathways ID) check filters down to genuine
+# WikiPathways-sourced pathway entities. For Arabidopsis thaliana
+# (tested 2026-11-02): 1284 compounds total, 225 (17.5%) have ANY P527
+# link, but only 118 (9.2%) link to a genuine WikiPathways pathway.
+#
+# Note: query.wikidata.org times out on large unbounded counts;
+# run per-taxon (see VALUES line) or add LIMIT while developing.
+
+SELECT ?taxon ?taxonLabel
+       (COUNT(DISTINCT ?compound) AS ?compoundsTotal)
+       (COUNT(DISTINCT ?compoundAnyP527) AS ?compoundsAnyP527)
+       (COUNT(DISTINCT ?compoundRealPathway) AS ?compoundsRealPathway)
+WHERE {
+  # Restrict to one taxon while testing; remove VALUES for a full run.
+  VALUES ?taxon { wd:Q158695 }  # Arabidopsis thaliana
+
+  ?compound wdt:P703 ?taxon .
+
+  OPTIONAL {
+    ?p1 wdt:P527 ?compound .
+    BIND(?compound AS ?compoundAnyP527)
+  }
+  OPTIONAL {
+    ?p2 wdt:P527 ?compound .
+    ?p2 wdt:P2410 ?wikipathwaysId .
+    BIND(?compound AS ?compoundRealPathway)
+  }
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+GROUP BY ?taxon ?taxonLabel

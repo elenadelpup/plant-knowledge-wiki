@@ -1,0 +1,63 @@
+# Pilot query (project page "Example Query"): for Arabidopsis thaliana,
+# find compounds found in it, the pathways that contain them (via P527
+# "has part(s)"), and any genes of that taxon linked to those pathways.
+#
+# Run at: https://query.wikidata.org/
+#
+# Findings from actually running this (worth carrying into the gap
+# analysis, Objective 3):
+#
+# 1. Dropped the `?compound wdt:P31 wd:Q11173` ("instance of chemical
+#    compound") filter from the original draft: it returned zero rows.
+#    Compounds here are typed inconsistently - e.g. ammonia (Q4087) is
+#    `instance of` "type of chemical entity" (Q113145171), not Q11173.
+#    This is itself a class-hierarchy inconsistency (Objective 3).
+#
+# 2. P527 ("has part(s)") is heavily overloaded. Without the P2410
+#    (WikiPathways ID) filter, "pathways" linked to a compound include
+#    non-pathway items like "ammonia solution" or "metal ammine complex"
+#    (plain composition statements, not biosynthesis). The P2410 filter
+#    is essential to get genuine WikiPathways-sourced pathways.
+#
+# 3. Even genuine pathways found this way (e.g. WP78 TCA cycle, WP497
+#    urea cycle, WP716 vitamin A/carotenoid metabolism) are generic
+#    human/model pathways, not Arabidopsis-specific - confirmed by
+#    checking their linked genes directly (SUCLA2, SDHA, OGDH, etc. are
+#    human gene symbols). Restricting the OPTIONAL gene block to genes
+#    with `found in taxon` (P703) = Arabidopsis thaliana yields NO
+#    results at all. This is a direct, queryable demonstration of the
+#    project's core gap: pathway data in Wikidata is not taxon-specific,
+#    so a compound "produced in" a plant links, via P527, to pathway/gene
+#    data that is actually about human or model-organism biology.
+#
+# 4. The enzyme-mediated branch (pathway -P527-> enzyme -P702-> gene)
+#    returned junk too: the "enzyme" slot matched L-glutamic acid, a
+#    metabolite, not an enzyme - P527 again being overloaded/ambiguous.
+
+SELECT ?compound ?compoundLabel ?pathway ?pathwayLabel ?wikipathwaysId ?gene ?geneLabel
+WHERE {
+  VALUES ?taxon { wd:Q158695 }  # Arabidopsis thaliana
+
+  # Compound found in this taxon
+  ?compound wdt:P703 ?taxon .
+
+  # Pathway that has this compound as a part (indirect compound -> pathway link)
+  ?pathway wdt:P527 ?compound .
+  ?pathway wdt:P2410 ?wikipathwaysId .
+
+  # Optional: gene of the same taxon, linked to the pathway (direct or via enzyme).
+  # Expect this to be empty in practice - see finding 3 above.
+  OPTIONAL {
+    ?gene wdt:P31 wd:Q7187 ;        # instance of gene
+          wdt:P703 ?taxon .
+    {
+      ?pathway wdt:P527 ?gene .
+    } UNION {
+      ?pathway wdt:P527 ?enzyme .
+      ?enzyme wdt:P702 ?gene .      # enzyme encoded by gene
+    }
+  }
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 200
