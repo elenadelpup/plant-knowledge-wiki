@@ -1,0 +1,32 @@
+Hi Elena, I re-ran the coverage query and found something that changes the gap number.
+
+**Finding:** Grouping the 1284 items with `found in taxon` (P703) = Arabidopsis thaliana (Q158695) by `instance of` (P31) shows ~271 are not chemicals:
+
+| Class | Count |
+|---|---|
+| class of protein-containing complexes (Q107509287) | 228 |
+| gene (Q7187) | 28 |
+| chromosome (Q37748) | 7 |
+| protein (Q8054) | 5 |
+| MeSH single protein entry (Q101563126) | 1 |
+| no P31 at all | 3 |
+
+Restricting to chemical classes gives **1013 chemicals, of which 118 (11.6%) link to a WikiPathways pathway**, instead of 118/1284 = 9.2%. The gap is still ~88%, but the denominator should be filtered by chemical class.
+
+Also: only 2 of the 1013 are `instance of` "chemical compound" (Q11173); 804 are "type of chemical entity" (Q113145171), which supports the class-inconsistency finding.
+
+**Query (could be added as queries/03):**
+```sparql
+SELECT (COUNT(DISTINCT ?c) AS ?chemicalsTotal)
+       (COUNT(DISTINCT ?cPathway) AS ?chemicalsWithPathway)
+WHERE {
+  VALUES ?class { wd:Q113145171 wd:Q59199015 wd:Q15711994 wd:Q11173 wd:Q56256173 }
+  ?c wdt:P703 wd:Q158695 ;
+     wdt:P31 ?class .
+  OPTIONAL {
+    ?p wdt:P527 ?c ;
+       wdt:P2410 ?wp .
+    BIND(?c AS ?cPathway)
+  }
+}
+```

@@ -67,6 +67,39 @@ the gap the qualifier pattern (Objective 4) and the caffeine example on
 the project page are about: biosynthesis is taxon-specific, and Wikidata's
 current pathway/gene data mostly isn't.
 
+## Coverage correction: non-chemical items in the P703 count
+
+Query: [`03_arabidopsis_chemical_class_filter.rq`](../queries/03_arabidopsis_chemical_class_filter.rq)
+Run 2026-11-20.
+
+Grouping the 1284 items with `found in taxon` (P703) = Q158695 by
+`instance of` (P31) shows that ~271 of them are not chemicals:
+
+| P31 class | Count |
+|---|---|
+| class of protein-containing complexes (Q107509287) | 228 |
+| gene (Q7187) | 28 |
+| chromosome (Q37748) | 7 |
+| protein (Q8054) | 5 |
+| MeSH single protein entry (Q101563126) | 1 |
+| no P31 at all | 3 |
+
+Restricting to chemical classes (Q113145171, Q59199015, Q15711994,
+Q11173, Q56256173):
+
+| Metric | Count | % of chemicals |
+|---|---|---|
+| Chemicals found in taxon (P703) | 1013 | 100% |
+| ...with a backlink to a WikiPathways-sourced pathway (P527 + P2410) | 118 | 11.6% |
+
+**Reading:** the coverage numbers above (1284 / 9.2%) use a denominator
+that mixes proteins, genes and chromosomes with compounds. The corrected
+gap is still large (~88% of chemicals have no pathway context), but any
+gap figure quoted in the property proposal should use the chemical-class
+filter. Only 2 of the 1013 chemicals are `instance of` "chemical
+compound" (Q11173); 804 are "type of chemical entity" (Q113145171),
+which strengthens the class-hierarchy issue above.
+
 ## Still open / not yet checked
 
 - `stated in` (P248) does **not** point to Q104225190 ("LOTUS, natural
